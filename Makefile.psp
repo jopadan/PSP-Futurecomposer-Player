@@ -1,0 +1,21 @@
+PSPSDK                 = $(shell psp-config --pspsdk-path)
+PSPDIR                 = $(shell psp-config --psp-prefix)
+
+INCDIR                 := audio/psp $(PSPDIR)/include 
+CFLAGS                 = -G0 -Wall -O2 -Wno-deprecated -fno-strict-aliasing
+LIBS                   = -lstdc++ -lm  -lpspaudiolib -lpspaudio 
+
+OBJS                   = FC.o LamePaula.o Main_psp.o
+
+
+TARGET                 = fcplay
+EXTRA_TARGETS          = EBOOT.PBP
+PSP_EBOOT_TITLE        = fcplay
+EXTRA_CLEAN            = clean_kxploit
+
+include $(PSPSDK)/lib/build.mak
+
+clean_kxploit:
+	rm -rf $(TARGET)
+	rm -rf "$(TARGET)%"
+
