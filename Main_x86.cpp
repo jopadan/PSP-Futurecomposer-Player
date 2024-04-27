@@ -1,14 +1,12 @@
-#include <stdio.h>
-#include <fstream>
-#include <limits.h>
-#include <signal.h>
-#include <stdlib.h>
-#include <string.h>
+#include <climits>
+#include <csignal>
+#include <cstdlib>
+#include <cstdio>
+#include <cstring>
 #include <iostream>
 #include <fstream>
 #include "FC.h"
 #include "MyTypes.h"
-
 
 #include <alsa/asoundlib.h>
 

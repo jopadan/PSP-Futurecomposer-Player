@@ -1,9 +1,8 @@
-#include <ctype.h>
-#include <iomanip.h>
-#include <fstream.h>
-#include <signal.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstdlib>
+#include <cstdio>
+#include <cstring>
+#include <cctype>
+#include <csignal>
 #include <unistd.h>
 
 #include <pspkernel.h>
