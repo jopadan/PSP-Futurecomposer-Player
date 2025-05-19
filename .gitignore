@@ -1,0 +1,9 @@
+*.o
+src/*.o
+*.exe
+fcplay
+fcplay.*
+fcplay_*
+fcplay_*.*
+EBOOT.PBP
+PARAM.SFO

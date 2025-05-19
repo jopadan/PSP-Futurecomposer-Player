@@ -8,49 +8,49 @@
 
 #include "LamePaula.h"
 
-uword MIXER_patterns;
-uword MIXER_samples;
-uword MIXER_voices;
-ubyte MIXER_speed;
-ubyte MIXER_bpm;
-ubyte MIXER_count;
-uword MIXER_minPeriod;
-uword MIXER_maxPeriod;
+uint16_t MIXER_patterns;
+uint16_t MIXER_samples;
+uint16_t MIXER_voices;
+uint8_t MIXER_speed;
+uint8_t MIXER_bpm;
+uint8_t MIXER_count;
+uint16_t MIXER_minPeriod;
+uint16_t MIXER_maxPeriod;
 
 struct channel logChannel[32];
 
 void (*mixerPlayRout)();
 const char* mixerFormatName = 0;
 
-void* mixerFill8bitMono( void*, udword );
-void* mixerFill8bitStereo( void*, udword );
-void* mixerFill16bitMono( void*, udword );
-void* mixerFill16bitStereo( void*, udword );
+void* mixerFill8bitMono( void*, uint32_t );
+void* mixerFill8bitStereo( void*, uint32_t );
+void* mixerFill16bitMono( void*, uint32_t );
+void* mixerFill16bitStereo( void*, uint32_t );
 
-void* (*mixerFillRout)( void*, udword ) = &mixerFill8bitMono;
+void* (*mixerFillRout)( void*, uint32_t ) = &mixerFill8bitMono;
 
 void mixerSetReplayingSpeed();
 
-static const udword AMIGA_CLOCK_PAL = 3546895;
-static const udword AMIGA_CLOCK_NTSC = 3579546;
-static const udword AMIGA_CLOCK = AMIGA_CLOCK_PAL;
+static const uint32_t AMIGA_CLOCK_PAL = 3546895;
+static const uint32_t AMIGA_CLOCK_NTSC = 3579546;
+static const uint32_t AMIGA_CLOCK = AMIGA_CLOCK_PAL;
 
-static sbyte mix8[256];
-static sword mix16[256];
+static int8_t mix8[256];
+static int16_t mix16[256];
 
-static ubyte zero8bit;   // ``zero''-sample
-static uword zero16bit;  // either signed or unsigned
+static uint8_t zero8bit;   // ``zero''-sample
+static uint16_t zero16bit;  // either signed or unsigned
 
-static udword pcmFreq;
-static ubyte bufferScale;
+static uint32_t pcmFreq;
+static uint8_t bufferScale;
 
-static udword samplesAdd;
-static udword samplesPnt;
-static uword samples, samplesOrg;
+static uint32_t samplesAdd;
+static uint32_t samplesPnt;
+static uint16_t samples, samplesOrg;
 
-static udword toFill = 0;
+static uint32_t toFill = 0;
 
-static ubyte emptySample;
+static uint8_t emptySample;
 
 
 void channel::takeNextBuf()
@@ -105,7 +105,7 @@ void channel::updatePerVol()
     }
 }
 
-void mixerInit(udword freq, int bits, int channels, uword zero)
+void mixerInit(uint32_t freq, int bits, int channels, uint16_t zero)
 {
     pcmFreq = freq;
     bufferScale = 0;
@@ -138,20 +138,20 @@ void mixerInit(udword freq, int bits, int channels, uword zero)
         }
     }
     
-	uword ui;
+	uint16_t ui;
     long si;
-	uword voicesPerChannel = MIXER_voices/channels;
+	uint16_t voicesPerChannel = MIXER_voices/channels;
 
     // Input samples: 80,81,82,...,FE,FF,00,01,02,...,7E,7F
     // Array: 00/x, 01/x, 02/x,...,7E/x,7F/x,80/x,81/x,82/x,...,FE/x/,FF/x 
     ui = 0;
     si = 0;
     while (si++ < 128)
-		mix8[ui++] = (sbyte)(si/voicesPerChannel);
+		mix8[ui++] = (int8_t)(si/voicesPerChannel);
     
     si = -128;
     while (si++ < 0)
-		mix8[ui++] = (sbyte)(si/voicesPerChannel);
+		mix8[ui++] = (int8_t)(si/voicesPerChannel);
     
     // Input samples: 80,81,82,...,FE,FF,00,01,02,...,7E,7F
     // Array: 0/x, 100/x, 200/x, ..., FF00/x
@@ -159,13 +159,13 @@ void mixerInit(udword freq, int bits, int channels, uword zero)
     si = 0;
     while (si < 128*256)
     {
-		mix16[ui++] = (sword)(si/voicesPerChannel);
+		mix16[ui++] = (int16_t)(si/voicesPerChannel);
         si += 256;
     }
     si = -128*256;
     while (si < 0)
     {
-		mix16[ui++] = (sword)(si/voicesPerChannel);
+		mix16[ui++] = (int16_t)(si/voicesPerChannel);
         si += 256;
     }
 
@@ -187,24 +187,24 @@ void mixerInit(udword freq, int bits, int channels, uword zero)
     mixerSetReplayingSpeed();
 }
 
-void mixerFillBuffer( void* buffer, udword bufferLen )
+void mixerFillBuffer( void* buf, size_t len )
 {
     // Both, 16-bit and stereo samples take more memory.
     // Hence fewer samples fit into the buffer.
-    bufferLen >>= bufferScale;
+    len >>= bufferScale;
   
-    while ( bufferLen > 0 )
+    while ( len > 0 )
     {
-        if ( toFill > bufferLen )
+        if ( toFill > len )
         {
-            buffer = (*mixerFillRout)(buffer, bufferLen);
-            toFill -= bufferLen;
-            bufferLen = 0;
+            buf = (*mixerFillRout)(buf, len);
+            toFill -= len;
+            len = 0;
         }
         else if ( toFill > 0 )
         {
-            buffer = (*mixerFillRout)(buffer, toFill);
-            bufferLen -= toFill;
+            buf = (*mixerFillRout)(buf, toFill);
+            len -= toFill;
             toFill = 0;   
         }
 	
@@ -212,7 +212,7 @@ void mixerFillBuffer( void* buffer, udword bufferLen )
         {
             (*mixerPlayRout)();
 
-            register udword temp = ( samplesAdd += samplesPnt );
+            const uint32_t temp = ( samplesAdd += samplesPnt );
             samplesAdd = temp & 0xFFFF;
             toFill = samples + ( temp > 65535 );
 	  
@@ -234,7 +234,7 @@ void mixerFillBuffer( void* buffer, udword bufferLen )
             }
         }
         
-    } // while bufferLen
+    } // while len
 }
 
 void mixerSetReplayingSpeed()
@@ -244,22 +244,22 @@ void mixerSetReplayingSpeed()
     samplesAdd = 0;
 }
 
-void mixerSetBpm( uword bpm )
+void mixerSetBpm( uint16_t bpm )
 {
-    uword callsPerSecond = (bpm * 2) / 5;
+    uint16_t callsPerSecond = (bpm * 2) / 5;
     samples = ( samplesOrg = pcmFreq / callsPerSecond );
     samplesPnt = (( pcmFreq % callsPerSecond ) * 65536 ) / callsPerSecond;  
     samplesAdd = 0; 
 }
 
-void* mixerFill8bitMono( void* buffer, udword numberOfSamples )
+void* mixerFill8bitMono( void* buf, uint32_t numberOfSamples )
 {
-    ubyte* buffer8bit = (ubyte*)buffer;
+    uint8_t* buffer8bit = (uint8_t*)buf;
     for ( int i = 0; i < MIXER_voices; i++ )
     {
-        buffer8bit = (ubyte*)buffer;
+        buffer8bit = (uint8_t*)buf;
       
-        for ( udword n = numberOfSamples; n > 0; n-- )
+        for ( uint32_t n = numberOfSamples; n > 0; n-- )
         {
             if ( i == 0 )
             {
@@ -290,14 +290,14 @@ void* mixerFill8bitMono( void* buffer, udword numberOfSamples )
     return(buffer8bit);
 }
 
-void* mixerFill8bitStereo( void* buffer, udword numberOfSamples )
+void* mixerFill8bitStereo( void* buf, uint32_t numberOfSamples )
 {
-    ubyte* buffer8bit = (ubyte*)buffer;
+    uint8_t* buffer8bit = (uint8_t*)buf;
     for ( int i = 1; i < MIXER_voices; i+=2 )
     {
-        buffer8bit = ((ubyte*)buffer)+1;
+        buffer8bit = ((uint8_t*)buf)+1;
       
-        for ( udword n = numberOfSamples; n > 0; n-- )
+        for ( uint32_t n = numberOfSamples; n > 0; n-- )
         {
             if ( i == 1 )
             {
@@ -327,9 +327,9 @@ void* mixerFill8bitStereo( void* buffer, udword numberOfSamples )
     }
     for ( int i = 0; i < MIXER_voices; i+=2 )
     {
-        buffer8bit = (ubyte*)buffer;
+        buffer8bit = (uint8_t*)buf;
       
-        for ( udword n = numberOfSamples; n > 0; n-- )
+        for ( uint32_t n = numberOfSamples; n > 0; n-- )
         {
             if ( i == 0 )
             {
@@ -360,14 +360,14 @@ void* mixerFill8bitStereo( void* buffer, udword numberOfSamples )
     return(buffer8bit);
 }
 
-void* mixerFill16bitMono( void* buffer, udword numberOfSamples )
+void* mixerFill16bitMono( void* buf, uint32_t numberOfSamples )
 {
-    sword* buffer16bit = (sword*)buffer;
+    int16_t* buffer16bit = (int16_t*)buf;
     for ( int i = 0; i < MIXER_voices; i++ )
     {
-        buffer16bit = (sword*)buffer;
+        buffer16bit = (int16_t*)buf;
 	
-        for ( udword n = numberOfSamples; n > 0; n-- )
+        for ( uint32_t n = numberOfSamples; n > 0; n-- )
         {
             if ( i == 0 )
             {
@@ -398,14 +398,14 @@ void* mixerFill16bitMono( void* buffer, udword numberOfSamples )
     return(buffer16bit);
 }
 
-void* mixerFill16bitStereo( void* buffer, udword numberOfSamples )
+void* mixerFill16bitStereo( void* buf, uint32_t numberOfSamples )
 {
-    sword* buffer16bit = (sword*)buffer;
+    int16_t* buffer16bit = (int16_t*)buf;
     for ( int i = 1; i < MIXER_voices; i+=2 )
     {
-        buffer16bit = ((sword*)buffer)+1;
+        buffer16bit = ((int16_t*)buf)+1;
 	
-        for ( udword n = numberOfSamples; n > 0; n-- )
+        for ( uint32_t n = numberOfSamples; n > 0; n-- )
         {
             if ( i == 1 )
             {
@@ -435,9 +435,9 @@ void* mixerFill16bitStereo( void* buffer, udword numberOfSamples )
     }
     for ( int i = 0; i < MIXER_voices; i+=2 )
     {
-        buffer16bit = (sword*)buffer;
+        buffer16bit = (int16_t*)buf;
 	
-        for ( udword n = numberOfSamples; n > 0; n-- )
+        for ( uint32_t n = numberOfSamples; n > 0; n-- )
         {
             if ( i == 0 )
             {

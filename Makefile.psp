@@ -1,11 +1,12 @@
 PSPSDK                 = $(shell psp-config --pspsdk-path)
 PSPDIR                 = $(shell psp-config --psp-prefix)
 
-INCDIR                 := audio/psp $(PSPDIR)/include 
-CFLAGS                 = -G0 -Wall -O2 -Wno-deprecated -fno-strict-aliasing
-LIBS                   = -lstdc++ -lm  -lpspaudiolib -lpspaudio 
-
-OBJS                   = FC.o LamePaula.o Main_psp.o
+INCDIR                := audio/psp $(PSPDIR)/include src
+LIBS                   = -lstdc++ -lm  -lpspaudiolib -lpspaudio
+DEBUG                 ?= -DDEBUG -DDEBUG2 -DDEBUG3
+CFLAGS                 = -G0 -Wall -O2 -std=gnu++17 ${DEBUG} -Wno-deprecated -fno-strict-aliasing
+RM                    ?= rm
+OBJS                   = src/Dump.o src/FC.o src/LamePaula.o src/fcplay.o
 
 
 TARGET                 = fcplay
